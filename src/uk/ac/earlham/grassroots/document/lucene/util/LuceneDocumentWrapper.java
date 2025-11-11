@@ -54,7 +54,13 @@ public class LuceneDocumentWrapper implements DocumentWrapper {
 
 	@Override
 	public boolean addString (String key, String value) {
-		Field f = new StringField (key, value, Field.Store.YES);
+		
+		/* 
+		 * for some reason lucene doesn't find these StringFields  again when searching 
+		 * if the case differs, so let's make all of the stored values lower case
+		 */
+		String lower_case_value = value.toLowerCase ();
+		Field f = new StringField (key, lower_case_value, Field.Store.YES);
 		ldw_document.add (f);
 		
 		addToDefaultBuffer (value);

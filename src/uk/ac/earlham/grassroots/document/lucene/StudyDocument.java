@@ -244,9 +244,7 @@ public class StudyDocument extends MongoDocument {
 					o = accessions.get (i);
 
 					String accession = o.toString ();
-
 					addString (SD_ACCESSION, accession);
-
 				}
 			}
 		}
