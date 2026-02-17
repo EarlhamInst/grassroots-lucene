@@ -13,12 +13,14 @@ public class MeasuredVariableJSON extends GrassrootsJSON {
 	final public static String MVJ_MEASUREMENT = "measurement";
 	final public static String MVJ_UNIT = "unit";
 	final public static String MVJ_VARIABLE = "variable";
+	final public static String MVJ_SCALE = "scale";
 	final public static String MVJ_ONTOLOGY = "ontology";
 	final public static String MVJ_CROP = "crop";
 	final public static String MVJ_TERM_URL = "so:sameAs";
 	final public static String MVJ_TERM_NAME = "so:name";
 	final public static String MVJ_TERM_ABBREVIATION = "abbreviation";
 	final public static String MVJ_TERM_DESCRIPTION = "so:description";
+	final public static String MVJ_SCALE_CLASS = "class_type";
 
 	
 	public MeasuredVariableJSON (Document doc, Map <String, String []> highlights, int highlighter_index) {
@@ -34,15 +36,23 @@ public class MeasuredVariableJSON extends GrassrootsJSON {
 				if (addUnit (doc)) {
 					if (addMeasurement (doc)) {
 						if (addVariable (doc)) {
+
+							System.out.println (">>>> addOntology ()");
+
 							if (addOntology (doc)) {
-								b = true;
+								
+								System.out.println (">>>> addScale ()");
+								if (addScale (doc)) {
+									b = true;
+								}
 							}
-						}
-					}					
+						}					
+					}
 				}
-			}
+			}	
 		}
-		
+
+		System.out.println (">>>> b " + b);
 		return b;
 	}
 	
@@ -137,6 +147,30 @@ public class MeasuredVariableJSON extends GrassrootsJSON {
 	}
 
 	
+	
+	private boolean addScale (Document doc) {
+		boolean success_flag = false;
+		String name = getString (doc, MeasuredVariableDocument.MVD_SCALE_NAME);
+		
+		if (name != null) {
+			String class_type = getString (doc, MeasuredVariableDocument.MVD_SCALE_CLASS);
+
+			if (class_type != null) {
+				JSONObject scale = new JSONObject ();
+				
+				scale.put (MeasuredVariableJSON.MVJ_TERM_NAME, name);
+				scale.put (MeasuredVariableJSON.MVJ_SCALE_CLASS, class_type);
+
+				addJSONObject (MeasuredVariableJSON.MVJ_SCALE, scale);
+
+				success_flag = true;
+			}
+			
+		}
+
+		return success_flag;
+	}
+
 
 	private boolean addVariable (Document doc) {
 		boolean success_flag = false;

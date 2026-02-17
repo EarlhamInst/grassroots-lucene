@@ -299,6 +299,22 @@ abstract public class GrassrootsDocument {
 		return true;
 	}
 
+
+
+	
+	/**
+	 * Add a String value to be stored, but not indexed, to the Lucene document.
+	 * 
+	 * @param json_doc The Grassroots JSON document to pull the data from.
+	 * @param key The key within the given Grassroots JSON document to get the value for.
+	 * @return <code>true</code> if the Field was added to the underlying Lucene document successfully, 
+	 * <code>false</code> otherwise.
+	 * @throws IllegalArgumentException If the Grassroots JSON document does not contain the given key.
+	 */
+	public boolean addNonIndexedString (JSONObject json_doc, String key) throws IllegalArgumentException {		
+		return addNonIndexedString (json_doc, key, key);
+	}
+	
 	
 	
 	/**
@@ -310,12 +326,12 @@ abstract public class GrassrootsDocument {
 	 * <code>false</code> otherwise.
 	 * @throws IllegalArgumentException If the Grassroots JSON document does not contain the given key.
 	 */
-	public boolean addNonIndexedString (JSONObject json_doc, String key) throws IllegalArgumentException {
+	public boolean addNonIndexedString (JSONObject json_doc, String input_key, String output_key) throws IllegalArgumentException {
 		boolean success_flag = false;
-		String value = (String) json_doc.get (key);
+		String value = (String) json_doc.get (input_key);
 		
 		if (value != null) {
-			addNonIndexedString (key, value);
+			addNonIndexedString (output_key, value);
 			success_flag = true;
 		} 
 		

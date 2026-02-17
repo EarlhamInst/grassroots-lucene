@@ -30,6 +30,8 @@ public class MeasuredVariableDocument extends MongoDocument {
 	final static public String MVD_ONTOLOGY_NAME = MVD_PREFIX + "ontology_name";
 	final static public String MVD_ONTOLOGY_ID = MVD_PREFIX + "ontology_id";
 	final static public String MVD_ONTOLOGY_CROP = MVD_PREFIX + "crop";
+	final static public String MVD_SCALE_NAME = MVD_PREFIX + "scale_name";
+	final static public String MVD_SCALE_CLASS = MVD_PREFIX + "scale_class";
 	
 	
 	public MeasuredVariableDocument (JSONObject json_doc, DocumentWrapper wrapper) throws IllegalArgumentException {
@@ -122,6 +124,12 @@ public class MeasuredVariableDocument extends MongoDocument {
 			grassroots_doc.addText (child, MeasuredVariableJSON.MVJ_TERM_NAME, MeasuredVariableDocument.MVD_VARIABLE_NAME);
 			grassroots_doc.addString (child, MeasuredVariableJSON.MVJ_TERM_URL, MeasuredVariableDocument.MVD_VARIABLE_ID);				
 		}
+
+		child = (JSONObject) json_doc.get (MeasuredVariableJSON.MVJ_SCALE);
+		if (child != null) {
+			grassroots_doc.addNonIndexedString (child, MeasuredVariableJSON.MVJ_TERM_NAME, MeasuredVariableDocument.MVD_SCALE_NAME);
+			grassroots_doc.addNonIndexedString (child, MeasuredVariableJSON.MVJ_SCALE_CLASS, MeasuredVariableDocument.MVD_SCALE_CLASS);
+		}
 		
 		child = (JSONObject) json_doc.get (MeasuredVariableJSON.MVJ_ONTOLOGY);
 		if (child != null) {
@@ -129,7 +137,7 @@ public class MeasuredVariableDocument extends MongoDocument {
 			grassroots_doc.addString (child, MeasuredVariableJSON.MVJ_TERM_URL, MeasuredVariableDocument.MVD_ONTOLOGY_ID);				
 			
 			/* Add crop as facet rather than as string */
-			//grassroots_doc.addString (child, MeasuredVariableJSON.MVJ_CROP, MeasuredVariableDocument.MVD_ONTOLOGY_CROP);	
+			grassroots_doc.addNonIndexedString (child, MeasuredVariableJSON.MVJ_CROP, MeasuredVariableDocument.MVD_ONTOLOGY_CROP);	
 			
 			String value = (String) json_doc.get (MeasuredVariableJSON.MVJ_CROP);
 			
@@ -137,8 +145,6 @@ public class MeasuredVariableDocument extends MongoDocument {
 				FacetField crop_facet = new FacetField (MeasuredVariableDocument.MVD_ONTOLOGY_CROP, value);
 				grassroots_doc.gd_wrapper.addFacet (MeasuredVariableDocument.MVD_ONTOLOGY_CROP, value);
 			} 
-
-
 		} else {
 			System.err.println ("No Ontology in " + child);
 		}
