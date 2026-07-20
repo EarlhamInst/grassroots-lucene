@@ -7,7 +7,7 @@ import org.apache.lucene.facet.FacetField;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.impl.HttpSolrClient;
+import org.apache.solr.client.solrj.impl.Http2SolrClient;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.util.NamedList;
 
@@ -16,7 +16,7 @@ public class SolrDocumentWrapper implements DocumentWrapper {
 	protected SolrInputDocument sdw_doc;
 	
 	public SolrDocumentWrapper (String url) {
-		sdw_client = new HttpSolrClient.Builder (url).build ();
+		sdw_client = new Http2SolrClient.Builder (url).build ();
 		sdw_doc = new SolrInputDocument ();
 	}
 	

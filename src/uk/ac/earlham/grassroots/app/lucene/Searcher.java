@@ -51,6 +51,7 @@ import org.apache.lucene.facet.taxonomy.directory.DirectoryTaxonomyReader;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -486,8 +487,9 @@ public class Searcher {
 		int limit = Math.min (num_total_hits, hits.length);
 		
 		List <Document> docs = new ArrayList <Document> ();
+		StoredFields stored_fields = se_index_searcher.storedFields ();
 		for (int i = 0; i < limit; ++ i) {
-			Document doc = se_index_searcher.doc (hits [i].doc);
+			Document doc = stored_fields.document (hits [i].doc);
 			docs.add (doc);
 		}
 	    
@@ -504,8 +506,12 @@ public class Searcher {
 	   *  return another facets for  */
 	  public DrillDownData drillDown (Query base_query,  List <AbstractMap.SimpleEntry <String, String>> facets, int hits_per_page, int page_number) throws IOException {
 		FacetsCollector fc = new FacetsCollector ();
-		final int MAX_NUM_RESULTS = 1024;
 		List <FacetResult> all_facets = null;
+		int max_num_results = hits_per_page * (page_number + 1);		
+
+		if (max_num_results < 1024) {
+			max_num_results = 1024;
+		}
 		
 	    // Passing no baseQuery means we drill down on all
 	    // documents ("browse only"):
@@ -526,12 +532,12 @@ public class Searcher {
 	    }
 
 	    
-	    TopDocs resultDocs = FacetsCollector.search (se_index_searcher, q, MAX_NUM_RESULTS, fc);
+	    TopDocs resultDocs = FacetsCollector.search (se_index_searcher, q, max_num_results, fc);
 	    
 	    // Retrieve facets
 	    Facets facet_counts = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 
-    	all_facets = facet_counts.getAllDims (MAX_NUM_RESULTS);
+    	all_facets = facet_counts.getAllDims (max_num_results);
 	    
 	    if ((facets != null) && (!facets.isEmpty ())) {
 	    	for (AbstractMap.SimpleEntry <String, String> facet : facets) {
@@ -564,9 +570,10 @@ public class Searcher {
 
 			Map <String, String []> highlights = QueryUtil.GetHighlightingData (q, se_index_searcher, se_index_reader, QueryUtil.getAnalyzer (), resultDocs);
 
+			StoredFields stored_fields = se_index_searcher.storedFields ();
+
 			for (int i = start; i <= end; ++ i) {
-				Document doc = se_index_searcher.doc (hits [i].doc);
-				
+				Document doc = stored_fields.document (hits [i].doc);				
 				GrassrootsJSON json_doc = GrassrootsDocumentFactory.getJSON (doc, highlights, i);
 
 				if (json_doc != null) {

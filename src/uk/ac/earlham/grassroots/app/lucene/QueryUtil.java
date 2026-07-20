@@ -14,6 +14,7 @@ import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.StoredFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -317,9 +318,10 @@ public class QueryUtil {
 		Map <String, String []> highlights = GetHighlightingData (query, searcher, reader, getAnalyzer (), results);
 
 		
+		StoredFields stored_fields = searcher.storedFields ();
 		for (int i = 0; i < limit; ++ i) {
 			ScoreDoc score_doc = hits [i];
-			Document doc = searcher.doc (score_doc.doc);
+			Document doc = stored_fields.document (hits [i].doc);				
 			
 			GrassrootsJSON json_doc = GrassrootsDocumentFactory.getJSON (doc, highlights, i);
 
@@ -358,7 +360,8 @@ public class QueryUtil {
 
 	
 	static public Map <String, String []> GetHighlightingData (Query query, IndexSearcher searcher, IndexReader reader, Analyzer analyzer, TopDocs hits) {
-		UnifiedHighlighter highlighter = new UnifiedHighlighter (searcher, analyzer);        
+		UnifiedHighlighter.Builder builder = new UnifiedHighlighter.Builder (searcher, analyzer);        
+		UnifiedHighlighter highlighter = new UnifiedHighlighter (builder);        
 		List <String> fields = new ArrayList <String> ();
 		
 		getFields (fields, null, null);
@@ -390,13 +393,22 @@ public class QueryUtil {
 			
 			final int num_keys = keys.length;
 
-		    Pattern pattern = Pattern.compile ("<b>(\\S+)</b>");
+		  Pattern pattern = Pattern.compile ("<b>(\\S+)</b>");
 			
-			for (int i = 0; i < num_keys; ++ i) {
+			StoredFields stored_fields = null;
+			
+			
+			try {
+				stored_fields = searcher.storedFields ();
+			} catch (IOException ioe) {
+				System.err.println ("QueryUtil::DoUnifiedHighlighting: Failed to get stored fields, exception: " + ioe);
+			}
+			
+			if (stored_fields != null) {
+				for (int i = 0; i < num_keys; ++ i) {
 			    System.out.println (keys [i] + ":");
 			    String [] values = highlights.get (keys [i]);
-
-			    
+				    
 			    int j = 0;
 			    
 			    for (String value: values) {
@@ -404,34 +416,33 @@ public class QueryUtil {
 		    		Document doc = null;
 		    		
 					try {
-						doc = reader.document (doc_id);
+						doc = stored_fields.document (doc_id);				
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 
 					if (doc != null) {
-			    		String name = doc.get (GrassrootsDocument.GD_UNIQUE_NAME);
-			    						    	
-				    	if (value != null) {
-				    		Matcher matcher = pattern.matcher (value);
-				    		
-				    		
-				    		if (matcher.find ()) {
-				    			System.out.println ("\t MATCH doc [" + j + "] " + doc_id +  " - " + name + ": " + value);
-				    		} else {
-				    			System.out.println ("\t MISS  doc [" + j + "] " + doc_id +  " - " +name + ": " + value);			    			
-				    		}
-				    	} else {
-				    		System.out.println ("\t EMPTY doc [" + j + "] " + doc_id +  " - " + name + ": null");
-				    	}		
+		    		String name = doc.get (GrassrootsDocument.GD_UNIQUE_NAME);
+		    						    	
+			    	if (value != null) {
+			    		Matcher matcher = pattern.matcher (value);			    		
+			    		
+			    		if (matcher.find ()) {
+			    			System.out.println ("\t MATCH doc [" + j + "] " + doc_id +  " - " + name + ": " + value);
+			    		} else {
+			    			System.out.println ("\t MISS  doc [" + j + "] " + doc_id +  " - " +name + ": " + value);			    			
+			    		}
+			    	} else {
+			    		System.out.println ("\t EMPTY doc [" + j + "] " + doc_id +  " - " + name + ": null");
+			    	}		
 					}
 					
-			    	++ j;
-			    }
+		    	++ j;
+		    	}
+				}
 			}
 		}
-		
 	}
 	
 	

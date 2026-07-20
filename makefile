@@ -56,7 +56,7 @@ init:
 	mkdir -p ${classes.dir}
 
 compile: init
-	javac -g -d ${classes.dir} --class-path ${shared.path}:${lucene.path}:${solr.path} ${source.files}
+	javac -Xlint:deprecation -g -d ${classes.dir} --class-path ${shared.path}:${lucene.path}:${solr.path} ${source.files}
 
 core-jar: compile
 	jar --create --file ${core.jar} -C ${classes.dir} uk/ac/earlham/grassroots/document
