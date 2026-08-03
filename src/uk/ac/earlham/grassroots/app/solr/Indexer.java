@@ -52,6 +52,6 @@ public class Indexer implements SolrRequestHandler {
 			return null;
 	}
 	
-	public void initializeMetrics​ (SolrMetricsContext parentContext, String scope) {
+	public void initializeMetrics (SolrMetricsContext parentContext, String scope) {
 	}
 }
