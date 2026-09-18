@@ -44,6 +44,7 @@ import org.apache.lucene.facet.DrillSideways.DrillSidewaysResult;
 import org.apache.lucene.facet.FacetResult;
 import org.apache.lucene.facet.Facets;
 import org.apache.lucene.facet.FacetsCollector;
+import org.apache.lucene.facet.FacetsCollectorManager;
 import org.apache.lucene.facet.FacetsConfig;
 import org.apache.lucene.facet.taxonomy.FastTaxonomyFacetCounts;
 import org.apache.lucene.facet.taxonomy.TaxonomyReader;
@@ -376,8 +377,6 @@ public class Searcher {
 	
 	/** User runs a query and counts facets only without collecting the matching documents.*/
 	public List <FacetResult> getAllFacets (Query q, int max_num_facets) {
-		FacetsCollector fc = new FacetsCollector();
-
 		// MatchAllDocsQuery is for "browsing" (counts facets
 		// for all non-deleted docs in the index); normally
 		// you'd use a "normal" query:
@@ -390,7 +389,15 @@ public class Searcher {
 		List <FacetResult> results = new ArrayList <FacetResult> ();
 
 		try {
-			FacetsCollector.search (se_index_searcher, q, max_num_facets, fc);
+			FacetsCollectorManager fcm = new FacetsCollectorManager ();
+
+			// This safely handles concurrent segment collection behind the scenes.
+			FacetsCollectorManager.FacetsResult facets_result = FacetsCollectorManager.search (se_index_searcher, q, max_num_facets, fcm);
+
+			// Extract topDocs and the populated facetsCollector from the FacetsResult object
+			TopDocs top_docs = facets_result.topDocs ();
+			FacetsCollector fc = facets_result.facetsCollector ();
+
 			// Count both "Publish Date" and "Author" dimensions
 			Facets facets = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 			
@@ -408,7 +415,6 @@ public class Searcher {
 	/** User runs a query and counts facets only without collecting the matching documents.*/
 	public List <FacetResult> facetsOnlySearch (Query q, List <AbstractMap.SimpleEntry <String, String>> facets, int max_num_facets) {
 		List <FacetResult> results = null;
-		FacetsCollector fc = new FacetsCollector();
 
 		// MatchAllDocsQuery is for "browsing" (counts facets
 		// for all non-deleted docs in the index); normally
@@ -420,8 +426,17 @@ public class Searcher {
 
 		Facets facet_counts = null;
 
-		try {
-			FacetsCollector.search (se_index_searcher, q, max_num_facets, fc);
+		try {			
+			FacetsCollectorManager fcm = new FacetsCollectorManager ();
+
+			// This safely handles concurrent segment collection behind the scenes.
+			FacetsCollectorManager.FacetsResult facets_result = FacetsCollectorManager.search (se_index_searcher, q, max_num_facets, fcm);
+
+			// Extract topDocs and the populated facetsCollector from the FacetsResult object
+			TopDocs top_docs = facets_result.topDocs ();
+			FacetsCollector fc = facets_result.facetsCollector ();
+
+			// Count both "Publish Date" and "Author" dimensions			
 			facet_counts = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -505,7 +520,6 @@ public class Searcher {
 	  /** User drills down on a facet, and we
 	   *  return another facets for  */
 	  public DrillDownData drillDown (Query base_query,  List <AbstractMap.SimpleEntry <String, String>> facets, int hits_per_page, int page_number) throws IOException {
-		FacetsCollector fc = new FacetsCollector ();
 		List <FacetResult> all_facets = null;
 		int max_num_results = hits_per_page * (page_number + 1);		
 
@@ -531,9 +545,15 @@ public class Searcher {
 	    	}
 	    }
 
-	    
-	    TopDocs resultDocs = FacetsCollector.search (se_index_searcher, q, max_num_results, fc);
-	    
+		FacetsCollectorManager fcm = new FacetsCollectorManager ();
+
+		// This safely handles concurrent segment collection behind the scenes.
+		FacetsCollectorManager.FacetsResult facets_result = FacetsCollectorManager.search (se_index_searcher, q, max_num_results, fcm);
+
+		// Extract topDocs and the populated FacetsCollector from the FacetsResult object
+		TopDocs result_docs = facets_result.topDocs ();
+		FacetsCollector fc = facets_result.facetsCollector ();
+
 	    // Retrieve facets
 	    Facets facet_counts = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 
@@ -546,13 +566,14 @@ public class Searcher {
 	    		if (fr != null) {
 	    			all_facets.add (fr);	    		
 	    		}
+
 	    	}
 	    }
 	    
 	    	    	    
 	    // Retrieve results
-		ScoreDoc [] hits = resultDocs.scoreDocs;
-		int total_hits = Searcher.CastLongToInt (resultDocs.totalHits.value);
+		ScoreDoc [] hits = result_docs.scoreDocs;
+		int total_hits = Searcher.CastLongToInt (result_docs.totalHits.value);
 		
 		
 		JSONArray docs = new JSONArray ();
@@ -568,7 +589,7 @@ public class Searcher {
 				end = total_hits - 1;
 			}
 
-			Map <String, String []> highlights = QueryUtil.GetHighlightingData (q, se_index_searcher, se_index_reader, QueryUtil.getAnalyzer (), resultDocs);
+			Map <String, String []> highlights = QueryUtil.GetHighlightingData (q, se_index_searcher, se_index_reader, QueryUtil.getAnalyzer (), result_docs);
 
 			StoredFields stored_fields = se_index_searcher.storedFields ();
 
