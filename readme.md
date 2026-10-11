@@ -43,7 +43,9 @@ Once these are set, the Grassroots Lucene module can be built using the given Ma
 
 and then 
 
-```make install``` to install the Grassroots Lucene libraries into your Grassroots installation.
+```make install``` 
+
+to install the Grassroots Lucene libraries into your Grassroots installation.
 
 
 
