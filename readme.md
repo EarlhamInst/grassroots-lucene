@@ -3,8 +3,9 @@
 [Lucene](https://lucene.apache.org/) is a Java library which provides excellent indexing and
  search features allowing for functionality such as hit highlighting and faceting, 
 It is used to provide the functionality of the Grassroots search service and the indexing 
-of all services and their associated content. Since this code is Java-based, we don't have 
-platform-specific builds. 
+of all services and their associated content. Each service tells this Lucene module what content it 
+possesses, which fields to add to Lucene/Solr and how much to boost each field when searching.  
+Since this code is Java-based, we don't have platform-specific builds. 
 
 This module can either use Solr or interface directly to Lucene using tehir APIs. Both of these 
 can be installed and configured manually or you can use the `install_dependencies` script from the 
