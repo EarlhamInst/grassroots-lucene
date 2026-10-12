@@ -28,6 +28,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.uhighlight.UnifiedHighlighter;
+import org.apache.lucene.util.QueryBuilder;
 import org.apache.lucene.search.BooleanClause;
 
 import org.json.simple.JSONArray;
@@ -75,33 +76,6 @@ public class QueryUtil {
 		MeasuredVariableDocument.addQueryTerms (fields, boosts, string_fields);	
 		ProgrammeDocument.addQueryTerms (fields, boosts, string_fields);		
 		MartiDocument.addQueryTerms (fields, boosts, string_fields);
-	}
-	
-	
-	private static void addTermQueryToBuilder (String field, String query, Float boost, BooleanQuery.Builder query_builder) {
-		Query q;
-		TermQuery term_query = new TermQuery (new Term (field, query));
-		
-		if (boost != null) {
-			q = new BoostQuery (term_query, boost);
-		} else {
-			q = term_query;
-		}
-
-		query_builder.add (q, BooleanClause.Occur.SHOULD);
-	}
-	
-	private static void addPhraseQueryToBuilder (String field, String query, Float boost, BooleanQuery.Builder query_builder) {
-		Query q;
-		PhraseQuery phrase_query = new PhraseQuery (field, query);
-
-		if (boost != null) {
-			q = new BoostQuery (phrase_query, boost);
-		} else {
-			q = phrase_query;
-		}
-
-		query_builder.add (q, BooleanClause.Occur.SHOULD);
 	}
 	
 	
@@ -374,6 +348,9 @@ public class QueryUtil {
 			highlights = highlighter.highlightFields (fields_array, query, hits);
 		} catch (IOException e) {
 			System.err.println ("Failed to get highlighted fields for query \"" + query + "\", exception: "+ e);
+
+			/* callers expect a map, so carry on without any highlighting */
+			highlights = new HashMap <String, String []> ();
 		}
 	
 		return highlights;
@@ -448,20 +425,34 @@ public class QueryUtil {
 	
 	static private void AddQuery (String field, String value, BooleanQuery.Builder query_builder, Map <String, String> string_fields, Map <String, Float> boosts) {
 		Float boost = boosts.get (field);
+		Query q = null;
 
-		if (value.contains (" ")) {
-			if (string_fields.containsKey (field)) {
-				addTermQueryToBuilder (field, value, boost, query_builder);	
-			} else {
-				StringBuilder sb = new StringBuilder ();
-				
-				sb.append (value);
-				
-				addPhraseQueryToBuilder (field, sb.toString (), boost, query_builder);						
-			}
+		if (string_fields.containsKey (field)) {
+			/*
+			 * String fields are stored unanalysed and lower case,
+			 * see LuceneDocumentWrapper.addString ()
+			 */
+			q = new TermQuery (new Term (field, value.toLowerCase ()));
 		} else {
-			addTermQueryToBuilder (field, value, boost, query_builder);
+			/*
+			 * Analyse the value in the same way as the indexed text
+			 */
+			QueryBuilder builder = new QueryBuilder (getAnalyzer ());
+
+			if (value.contains (" ")) {
+				q = builder.createPhraseQuery (field, value);
+			} else {
+				q = builder.createBooleanQuery (field, value);
+			}
 		}
 
+		/* q is null if the analyzer removed every token, e.g. stop words */
+		if (q != null) {
+			if (boost != null) {
+				q = new BoostQuery (q, boost);
+			}
+
+			query_builder.add (q, BooleanClause.Occur.SHOULD);
+		}
 	}
 }

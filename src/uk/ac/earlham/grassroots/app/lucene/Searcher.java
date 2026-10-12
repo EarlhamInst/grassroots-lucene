@@ -110,9 +110,15 @@ public class Searcher {
 			TaxonomyReader taxonomy_reader = getTaxReader (tax_dir_name);		
 			
 			if (taxonomy_reader != null) {
-				searcher = new Searcher (index_reader, taxonomy_reader);							
+				searcher = new Searcher (index_reader, taxonomy_reader);
+			} else {
+				try {
+					index_reader.close ();
+				} catch (IOException e) {
+					System.err.println ("Failed to close index reader " + index_dir_name + ": " + e.getMessage ());
+				}
 			}
-			
+
 		}
 				
 		return searcher;
@@ -145,6 +151,11 @@ public class Searcher {
 	private static DirectoryTaxonomyReader getTaxReader (String tax_dir_name) {
 		DirectoryTaxonomyReader reader = null;
 		Directory tax_dir = null;
+
+		if (tax_dir_name == null) {
+			System.err.println ("No taxonomy directory specified");
+			return null;
+		}
 
 		try {
 			tax_dir = FSDirectory.open (Paths.get (tax_dir_name));
@@ -228,7 +239,7 @@ public class Searcher {
 			} else if ("-page".equals (args [i])) {
 				page = Integer.parseInt (args [++ i]);
 
-				if (page <= 0) {
+				if (page < 0) {
 					System.err.println("Invalid page.");
 					System.exit(1);
 				}
@@ -393,12 +404,9 @@ public class Searcher {
 
 			// This safely handles concurrent segment collection behind the scenes.
 			FacetsCollectorManager.FacetsResult facets_result = FacetsCollectorManager.search (se_index_searcher, q, max_num_facets, fcm);
-
-			// Extract topDocs and the populated facetsCollector from the FacetsResult object
-			TopDocs top_docs = facets_result.topDocs ();
 			FacetsCollector fc = facets_result.facetsCollector ();
 
-			// Count both "Publish Date" and "Author" dimensions
+			// Count all of the facet dimensions
 			Facets facets = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 			
 			results = facets.getAllDims (max_num_facets);
@@ -431,39 +439,32 @@ public class Searcher {
 
 			// This safely handles concurrent segment collection behind the scenes.
 			FacetsCollectorManager.FacetsResult facets_result = FacetsCollectorManager.search (se_index_searcher, q, max_num_facets, fcm);
-
-			// Extract topDocs and the populated facetsCollector from the FacetsResult object
-			TopDocs top_docs = facets_result.topDocs ();
 			FacetsCollector fc = facets_result.facetsCollector ();
 
-			// Count both "Publish Date" and "Author" dimensions			
 			facet_counts = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		} catch (IOException e) {
+			System.err.println ("facetsOnlySearch failed for query : " + q.toString () + " e: " + e);
+			return null;
 		}
-				
+
 		if ((facets != null) && (!facets.isEmpty ())) {
 			// Retrieve results
 			results = new ArrayList <FacetResult> ();
 
-		    if ((facets != null) && (!facets.isEmpty ())) {
-		    	for (AbstractMap.SimpleEntry <String, String> facet : facets) {
-		    		FacetResult fr = null;
-		    		
-					try {
-						fr = facet_counts.getTopChildren (max_num_facets, facet.getKey ());
-					} catch (IOException e) {
-						System.err.println ("Failed to get facte count for " + facet.getKey () + " e: " + e);
-					}
-		    		
-		    		if (fr != null) {
-		    			results.add (fr);	    		
-		    		}
-		    	}
-		    }
-			
-		}		
+	    	for (AbstractMap.SimpleEntry <String, String> facet : facets) {
+	    		FacetResult fr = null;
+
+				try {
+					fr = facet_counts.getTopChildren (max_num_facets, facet.getKey ());
+				} catch (IOException e) {
+					System.err.println ("Failed to get facet count for " + facet.getKey () + " e: " + e);
+				}
+
+	    		if (fr != null) {
+	    			results.add (fr);
+	    		}
+	    	}
+		}
 
 		return results;
 	}
@@ -554,22 +555,11 @@ public class Searcher {
 		TopDocs result_docs = facets_result.topDocs ();
 		FacetsCollector fc = facets_result.facetsCollector ();
 
-	    // Retrieve facets
+	    // Retrieve facets, this includes any dimensions that we have drilled down on
 	    Facets facet_counts = new FastTaxonomyFacetCounts (se_taxonomy_reader, se_config, fc);
 
     	all_facets = facet_counts.getAllDims (max_num_results);
-	    
-	    if ((facets != null) && (!facets.isEmpty ())) {
-	    	for (AbstractMap.SimpleEntry <String, String> facet : facets) {
-	    		FacetResult fr = facet_counts.getTopChildren (hits_per_page, facet.getKey ());
-	    		
-	    		if (fr != null) {
-	    			all_facets.add (fr);	    		
-	    		}
 
-	    	}
-	    }
-	    
 	    	    	    
 	    // Retrieve results
 		ScoreDoc [] hits = result_docs.scoreDocs;
@@ -717,9 +707,7 @@ public class Searcher {
 	public JSONObject getLuceneDocumentAsJSON (Document doc) {
 		JSONObject res = new JSONObject ();
 		String service = doc.get ("service");
-			
-		System.out.println ("doc + " );
-		
+
 		if (service != null) {
 			switch (service) {
 				case "BlastN":

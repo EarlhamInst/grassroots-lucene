@@ -62,22 +62,25 @@ public class GrassrootsJSON {
 	
 	protected String getHighlightedValue (String doc_value, String key) {
 		String value = null;
-		String [] values = gj_highlights.get (key);
 		
-		if (values != null) {
-			String highlighted_value = values [gj_highlight_index];
+		if (gj_highlights != null) {
+			String [] values = gj_highlights.get (key);
 			
-			if (highlighted_value != null) {
-	    		Matcher matcher = GrassrootsJSON.gj_highlighted_pattern.matcher (highlighted_value);
-					    		
-				if (matcher.find ()) {
-		    		String s = highlighted_value.replaceAll ("<b>", "").replaceAll ("</b>", "");
-
-		    		value = doc_value.replace (s, highlighted_value);
+			if (values != null) {
+				String highlighted_value = values [gj_highlight_index];
+				
+				if (highlighted_value != null) {
+		    		Matcher matcher = GrassrootsJSON.gj_highlighted_pattern.matcher (highlighted_value);
+						    		
+					if (matcher.find ()) {
+			    		String s = highlighted_value.replaceAll ("<b>", "").replaceAll ("</b>", "");
+	
+			    		value = doc_value.replace (s, highlighted_value);
+					}
 				}
 			}
 		}
-		
+					
 		return value;
 	}
 

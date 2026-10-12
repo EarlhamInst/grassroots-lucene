@@ -20,7 +20,7 @@ shared.path = \
 
 # Add in the appropriate irods libs and dependencies
 LUCENE_VERSION_MAJOR := $(shell echo $(lucene.version) | cut -f1 -d ".")
-SOLR_VERSION_MAJOR := $(shell echo $(lucene.version) | cut -f1 -d ".")
+SOLR_VERSION_MAJOR := $(shell echo $(solr.version) | cut -f1 -d ".")
 
 LUCENE_GE_9 := $(shell [ $(LUCENE_VERSION_MAJOR) -gt 8 ] && echo true)
 SOLR_GE_9 := $(shell [ $(SOLR_VERSION_MAJOR) -gt 8 ] && echo true)

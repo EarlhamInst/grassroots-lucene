@@ -337,11 +337,23 @@ public class Indexer {
 					
 				} else {
 					System.err.println ("Error: index dir '" + index_dir.toString () +  " tax dir '" + taxonomy_dir.toString () + " index_writer " + index_writer + " tax_writer " + tax_writer);
-				}	
 
-				
+					/* release the write lock if only the index writer was opened */
+					if (index_writer != null) {
+						try {
+						    index_writer.close ();
+						} catch (IOException ioe) {
+							System.err.println ("index_writer.close (): " + ioe.getMessage());
+						}
+					}
+
+					success_flag = false;
+				}
+
+
 			} else {
-				System.err.println ("Error: index dir '" + index_dir.toString () + " tax dir '" + taxonomy_dir.toString ());
+				System.err.println ("Error: index dir '" + index_dir + " tax dir '" + taxonomy_dir);
+				success_flag = false;
 			}
 			
 		} else {
@@ -435,8 +447,15 @@ public class Indexer {
 						}
 					}
 				}
-			}								
-		}
+			}	
+			
+			try {
+				reader.close ();							
+			} catch (IOException ioe) {
+				System.err.println ("Error closing File " + filename + " exception: " + ioe.getMessage ());
+				
+			}
+ 		}
 	}
 
 
@@ -478,7 +497,11 @@ public class Indexer {
 					System.out.println ("updating " + filename + ": " + obj_index + "/" + total);
 					
 					try {
-						index_writer.updateDocument (new Term (GrassrootsDocument.GD_LUCENE_ID, id_str), doc);
+						/*
+					 * The id is stored lower case by LuceneDocumentWrapper.addString ()
+					 * so we need to match that
+					 */
+					index_writer.updateDocument (new Term (GrassrootsDocument.GD_LUCENE_ID, id_str.toLowerCase ()), doc);
 						success_flag = true;
 					} catch (IOException ioe) {
 						System.err.println ("writer.updateDocument () failed for " + filename + " exception: " + ioe.getMessage ());
